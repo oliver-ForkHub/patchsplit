@@ -31,8 +31,6 @@ Tags:
 
 Moniker: patchsplit
 
-ReleaseNotes: |-
-  Initial WinGet package for patchsplit 1.0.2.
 
 ReleaseNotesUrl: https://github.com/zitzhen/patchsplit/releases/tag/v1.0.2
 
