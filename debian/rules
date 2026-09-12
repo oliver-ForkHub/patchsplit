@@ -1,15 +1,27 @@
 #!/usr/bin/make -f
 
-export CARGO_TARGET_DIR = $(CURDIR)/../patchsplit-build
+export CARGO_TARGET_DIR = $(CURDIR)/target
+
+include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/buildflags.mk
+include /usr/share/rustc/architecture.mk
+
+export CARGO_HOME = $(CURDIR)/debian/cargo_home
+export DEB_CARGO_CRATE = patchsplit_1.0.2
+export DEB_HOST_GNU_TYPE DEB_HOST_RUST_TYPE
+export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 
 %:
 	dh $@
 
 override_dh_auto_build:
-	cargo build --release
+	/usr/share/cargo/bin/cargo build --release
+
+override_dh_auto_configure:
+	/usr/share/cargo/bin/cargo prepare-debian debian/cargo_registry --link-from-system
 
 override_dh_auto_install:
-	install -Dm755 ../patchsplit-build/release/patchsplit \
+	install -Dm755 target/$(DEB_HOST_RUST_TYPE)/release/patchsplit \
 		debian/patchsplit/usr/bin/patchsplit
 
 override_dh_installman:
