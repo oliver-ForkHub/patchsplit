@@ -18,3 +18,4 @@ debian/cargo-target/
 # debian cargo
 cargo_home
 cargo_registry
+debian/patchsplit.debhelper.log
