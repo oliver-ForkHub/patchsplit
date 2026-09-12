@@ -9,7 +9,7 @@ Build-Depends:
  rustc,
  dpkg-dev,
  python3:native,
- librust-thiserror-dev
+ librust-thiserror-dev (>= 2.0.0)
 Standards-Version: 4.7.0
 Homepage: https://github.com/Iamliuxiaozhen/patchsplit
 Rules-Requires-Root: no

@@ -92,25 +92,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Debian packaging dependencies
+      - name: Build Debian package in Debian Trixie
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
-            build-essential \
-            cargo \
-            debhelper-compat \
-            dh-cargo \
-            dpkg-dev \
-            librust-thiserror-dev \
-            python3:native \
-            rustc
-
-      - name: Build Debian package
-        run: dpkg-buildpackage --build=binary --no-sign
+          set -euo pipefail
+          mkdir -p debian-artifacts
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            -v "$GITHUB_WORKSPACE/debian-artifacts:/artifacts" \
+            -w /tmp \
+            debian:trixie \
+            bash -euxo pipefail -c '
+              apt-get update
+              apt-get install --no-install-recommends -y \
+                build-essential \
+                cargo \
+                debhelper-compat \
+                dh-cargo \
+                dpkg-dev \
+                librust-thiserror-dev \
+                python3:native \
+                rustc
+              thiserror_version=$(dpkg-query -W -f="\${Version}" librust-thiserror-dev)
+              dpkg --compare-versions "$thiserror_version" ge 2.0.0
+              cp -a /workspace /tmp/patchsplit
+              cd /tmp/patchsplit
+              dpkg-buildpackage --build=binary --no-sign
+              cp /tmp/patchsplit_*.deb /artifacts/
+            '
 
       - name: Upload Debian package
         uses: actions/upload-artifact@v4
         with:
           name: patchsplit-debian-amd64
-          path: ../patchsplit_*.deb
+          path: debian-artifacts/patchsplit_*.deb
           if-no-files-found: error
