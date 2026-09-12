@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: patchsplit
 Upstream-Contact: Oliver <oliver@liuxiaozhen.dev>
-Source: https://github.com/Iamliuxiaozhen/patchsplit
+Source: https://github.com/zitzhen/patchsplit
 
 Files: *
 Copyright: 2026 ZIT小圳创科工作室
