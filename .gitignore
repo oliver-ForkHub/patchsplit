@@ -14,3 +14,7 @@ debian/cargo-target/
 
 # Quilt working directory
 .pc/
+
+# debian cargo
+cargo_home
+cargo_registry
