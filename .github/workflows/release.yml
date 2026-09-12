@@ -92,9 +92,39 @@ jobs:
           path: ${{ matrix.asset }}
           if-no-files-found: error
 
+  build-debian:
+    name: Build Debian package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Debian packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            cargo \
+            debhelper-compat \
+            dh-cargo \
+            dpkg-dev \
+            librust-thiserror-dev \
+            python3:native \
+            rustc
+
+      - name: Build Debian package
+        run: dpkg-buildpackage --build=binary --no-sign
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: patchsplit-debian-amd64
+          path: ../patchsplit_*.deb
+          if-no-files-found: error
+
   draft-release:
     name: Create Draft Release
-    needs: build
+    needs: [build, build-debian]
     runs-on: ubuntu-latest
     permissions:
       contents: write
