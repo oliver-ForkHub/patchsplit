@@ -1,0 +1,51 @@
+#!/usr/bin/make -f
+
+export CARGO_TARGET_DIR = $(CURDIR)/target
+
+include /usr/share/dpkg/architecture.mk
+include /usr/share/dpkg/buildflags.mk
+include /usr/share/rustc/architecture.mk
+
+export CARGO_HOME = $(CURDIR)/debian/cargo_home
+export DEB_CARGO_CRATE = patchsplit_1.0.2
+export DEB_HOST_GNU_TYPE DEB_HOST_RUST_TYPE
+export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+
+%:
+	dh $@
+
+define run_without_upstream_cargo_lock
+set -e; \
+lock_dir=$$(mktemp -d debian/.cargo-lock.XXXXXX); \
+had_lock=no; \
+cleanup() { \
+	trap - EXIT HUP INT TERM; \
+	if [ "$$had_lock" = yes ]; then \
+		rm -f Cargo.lock; \
+		mv "$$lock_dir/original" Cargo.lock; \
+	else \
+		rm -f Cargo.lock; \
+	fi; \
+	rmdir "$$lock_dir"; \
+}; \
+trap cleanup EXIT; \
+trap 'cleanup; exit 130' HUP INT TERM; \
+if [ -f Cargo.lock ]; then \
+	mv Cargo.lock "$$lock_dir/original"; \
+	had_lock=yes; \
+fi; \
+$(1)
+endef
+
+override_dh_auto_build:
+	@$(call run_without_upstream_cargo_lock,/usr/share/cargo/bin/cargo build --release)
+
+override_dh_auto_configure:
+	@$(call run_without_upstream_cargo_lock,/usr/share/cargo/bin/cargo prepare-debian debian/cargo_registry --link-from-system)
+
+override_dh_auto_install:
+	install -Dm755 target/$(DEB_HOST_RUST_TYPE)/release/patchsplit \
+		debian/patchsplit/usr/bin/patchsplit
+
+override_dh_installman:
+	dh_installman debian/patchsplit.1

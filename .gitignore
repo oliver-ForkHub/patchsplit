@@ -1,0 +1,21 @@
+
+# Debian packaging build artifacts
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/patchsplit/
+debian/patchsplit-dbgsym/
+
+# Rust build artifacts
+/target/
+
+debian/cargo-target/
+
+# Quilt working directory
+.pc/
+
+# debian cargo
+cargo_home
+cargo_registry
+debian/patchsplit.debhelper.log
