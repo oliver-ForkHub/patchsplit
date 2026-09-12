@@ -90,6 +90,7 @@ exist, it will point to the workflow commit. The workflow creates these files:
 - `patchsplit-linux-x86_64.tar.gz`
 - `patchsplit-macos-x86_64.tar.gz`
 - `patchsplit-windows-x86_64.zip`
+- `patchsplit_<version>_amd64.deb`
 
 Releases are created as drafts, so they should be reviewed and published from
 the GitHub Releases page.
@@ -97,6 +98,12 @@ the GitHub Releases page.
 ## Install
 
 ### Linux
+
+On Debian and Ubuntu, download the `.deb` release asset and install it with:
+
+```sh
+sudo apt install ./patchsplit_<version>_amd64.deb
+```
 
 > [!NOTE]
 > For Arch Linux, use the [`patchsplit-bin`](https://aur.archlinux.org/packages/patchsplit-bin) AUR package

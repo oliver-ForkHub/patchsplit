@@ -86,6 +86,7 @@ git push origin v1.x.x
 - `patchsplit-linux-x86_64.tar.gz`
 - `patchsplit-macos-x86_64.tar.gz`
 - `patchsplit-windows-x86_64.zip`
+- `patchsplit_<version>_amd64.deb`
 
 release 默认是草稿，需要在 GitHub Releases 页面检查后手动发布。
 
@@ -99,6 +100,12 @@ release 默认是草稿，需要在 GitHub Releases 页面检查后手动发布�
 > - 使用 `yay`: `yay -S patchsplit-bin`
 
 ### Linux
+
+在 Debian 和 Ubuntu 上，下载 release 中的 `.deb` 文件并执行：
+
+```sh
+sudo apt install ./patchsplit_<version>_amd64.deb
+```
 
 ```sh
 tar -xzf patchsplit-linux-x86_64.tar.gz
