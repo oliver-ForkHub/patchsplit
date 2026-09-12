@@ -15,10 +15,27 @@ export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 	dh $@
 
 override_dh_auto_build:
+	@set -e; \
+	restore_lock() { \
+		if [ -f debian/.cargo-lock.upstream ]; then \
+			mv debian/.cargo-lock.upstream Cargo.lock; \
+		fi; \
+	}; \
+	trap restore_lock EXIT HUP INT TERM; \
 	/usr/share/cargo/bin/cargo build --release
 
 override_dh_auto_configure:
-	/usr/share/cargo/bin/cargo prepare-debian debian/cargo_registry --link-from-system
+	@set -e; \
+	if [ -f Cargo.lock ]; then \
+		mv Cargo.lock debian/.cargo-lock.upstream; \
+	fi; \
+	rm -f Cargo.lock; \
+	if ! /usr/share/cargo/bin/cargo prepare-debian debian/cargo_registry --link-from-system; then \
+		if [ -f debian/.cargo-lock.upstream ]; then \
+			mv debian/.cargo-lock.upstream Cargo.lock; \
+		fi; \
+		exit 1; \
+	fi
 
 override_dh_auto_install:
 	install -Dm755 target/$(DEB_HOST_RUST_TYPE)/release/patchsplit \
