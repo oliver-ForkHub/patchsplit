@@ -14,28 +14,34 @@ export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
 %:
 	dh $@
 
+define run_without_upstream_cargo_lock
+set -e; \
+lock_dir=$$(mktemp -d debian/.cargo-lock.XXXXXX); \
+had_lock=no; \
+cleanup() { \
+	trap - EXIT HUP INT TERM; \
+	if [ "$$had_lock" = yes ]; then \
+		rm -f Cargo.lock; \
+		mv "$$lock_dir/original" Cargo.lock; \
+	else \
+		rm -f Cargo.lock; \
+	fi; \
+	rmdir "$$lock_dir"; \
+}; \
+trap cleanup EXIT; \
+trap 'cleanup; exit 130' HUP INT TERM; \
+if [ -f Cargo.lock ]; then \
+	mv Cargo.lock "$$lock_dir/original"; \
+	had_lock=yes; \
+fi; \
+$(1)
+endef
+
 override_dh_auto_build:
-	@set -e; \
-	restore_lock() { \
-		if [ -f debian/.cargo-lock.upstream ]; then \
-			mv debian/.cargo-lock.upstream Cargo.lock; \
-		fi; \
-	}; \
-	trap restore_lock EXIT HUP INT TERM; \
-	/usr/share/cargo/bin/cargo build --release
+	@$(call run_without_upstream_cargo_lock,/usr/share/cargo/bin/cargo build --release)
 
 override_dh_auto_configure:
-	@set -e; \
-	if [ -f Cargo.lock ]; then \
-		mv Cargo.lock debian/.cargo-lock.upstream; \
-	fi; \
-	rm -f Cargo.lock; \
-	if ! /usr/share/cargo/bin/cargo prepare-debian debian/cargo_registry --link-from-system; then \
-		if [ -f debian/.cargo-lock.upstream ]; then \
-			mv debian/.cargo-lock.upstream Cargo.lock; \
-		fi; \
-		exit 1; \
-	fi
+	@$(call run_without_upstream_cargo_lock,/usr/share/cargo/bin/cargo prepare-debian debian/cargo_registry --link-from-system)
 
 override_dh_auto_install:
 	install -Dm755 target/$(DEB_HOST_RUST_TYPE)/release/patchsplit \
