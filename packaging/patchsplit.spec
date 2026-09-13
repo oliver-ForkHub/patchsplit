@@ -2,10 +2,11 @@ Name:           patchsplit
 Version:        1.0.4
 Release:        1%{?dist}
 Summary:        A tool for splitting patch files
+Group:          Development/Tools
 
 License:        MIT
+Packager:       Oliver Lin <oliver@liuxiaozhen.dev>
 URL:            https://github.com/zitzhen/patchsplit
-
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  rust
@@ -19,6 +20,9 @@ A command-line tool for splitting patch files.
 
 %build
 cargo build --release --locked
+
+%check
+cargo test --release --locked
 
 %install
 install -Dm755 target/release/patchsplit \
