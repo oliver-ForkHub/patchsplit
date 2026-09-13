@@ -8,8 +8,8 @@ and splits it into one patch file per commit.
 ## Usage
 
 ```sh
-patchsplit <owner/repo> <pr-number> [--out <dir>] [--force]
-patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force]
+patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]
+patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]
 ```
 
 Examples:
@@ -31,10 +31,27 @@ patches/
 Existing output files are not overwritten by default. Pass `--force` to replace
 them.
 
+### Aggregate all commits
+
+```sh
+patchsplit openai/codex 42 --squash -o pr-42-patches
+git apply pr-42-patches/pr-42.patch
+```
+
+`-s, --squash` downloads GitHub's aggregate PR `.diff` and writes a single
+`pr-<pr-number>.patch`. This represents the net change from the PR's merge base
+to its head: repeated edits are combined and reverted changes disappear.
+It does not concatenate per-commit patches. The output is a raw diff for
+`git apply` on the corresponding base, without individual commit messages or
+authorship (it is not a `git am` mailbox). An empty net diff is reported as an
+empty patch and no file is written. Binary changes are limited to the data
+GitHub includes in its diff; binary file contents may not be included.
+
 ## Options
 
-- `-o, --out <dir>`: Output directory for split patch files.
+- `-o, --out <dir>`: Output directory for patch files.
 - `-f, --force`: Overwrite existing patch files.
+- `-s, --squash`: Write the PR's net diff as one patch.
 - `-h, --help`: Show help.
 - `-V, --version`: Show version.
 
@@ -62,6 +79,9 @@ The template is generated at `po/patchsplit.pot`. Source files used for
 extraction are listed in `po/POTFILES.in`.
 
 ## Build
+
+Tests (`cargo test`) also require Git on Unix to verify that aggregate patches
+apply to the expected file tree.
 
 ```sh
 cargo build --release
