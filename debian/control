@@ -6,6 +6,7 @@ Build-Depends:
  debhelper-compat (= 13),
  dh-cargo,
  cargo,
+ git,
  rustc,
  python3:native,
  librust-thiserror-dev (>= 2.0.0)

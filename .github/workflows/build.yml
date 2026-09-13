@@ -108,6 +108,7 @@ jobs:
                 cargo \
                 debhelper-compat \
                 dh-cargo \
+                git \
                 dpkg-dev \
                 librust-thiserror-dev \
                 python3:native \
@@ -152,6 +153,7 @@ jobs:
               dnf install -y \
                 cargo \
                 gcc \
+                git \
                 make \
                 redhat-rpm-config \
                 rpm-build \
