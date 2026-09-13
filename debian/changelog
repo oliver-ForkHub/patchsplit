@@ -1,12 +1,12 @@
-patchsplit (1.0.5-1) unstable; urgency=medium
+patchsplit (1.0.5-1~ubuntu26.04.1) resolute; urgency=medium
 
   * Add RPM packages to GitHub releases.
 
- -- Oliver <oliver@liuxiaozhen.dev>  Sun, 13 Sep 2026 12:30:00 +0800
+ -- Oliver <oliver@liuxiaozhen.dev>  Sun, 13 Sep 2026 14:45:00 +0800
 
 patchsplit (1.0.4-1) unstable; urgency=medium
 
- * Make .deb installation files available in GitHub releases for the first time.
+  * Make .deb installation files available in GitHub releases for the first time.
 
  -- Oliver <oliver@liuxiaozhen.dev>  Sun, 13 Sep 2026 00:43:00 +0800
 
