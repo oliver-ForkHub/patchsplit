@@ -111,7 +111,7 @@ sudo apt install ./patchsplit_<version>_amd64.deb
 在 Fedora、RHEL 及兼容发行版上，下载 release 中的 `.rpm` 文件并执行：
 
 ```sh
-sudo dnf install ./patchsplit-<version>-<release>.*.x86_64.rpm
+sudo dnf install ./patchsplit-*.x86_64.rpm
 ```
 
 ```sh

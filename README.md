@@ -110,7 +110,7 @@ On Fedora, RHEL, and compatible distributions, download the `.rpm` release
 asset and install it with:
 
 ```sh
-sudo dnf install ./patchsplit-<version>-<release>.*.x86_64.rpm
+sudo dnf install ./patchsplit-*.x86_64.rpm
 ```
 
 > [!NOTE]
