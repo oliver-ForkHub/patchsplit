@@ -104,7 +104,7 @@ PPA starts building the new version. Configure these repository variables:
 
 - `PPA_OWNER`: Launchpad account name.
 - `PPA_NAME`: PPA name, without the `ppa:` prefix.
-- `PPA_GPG_KEY_ID`: fingerprint or key ID matching the signing key.
+- `PPA_GPG_KEY_ID`: full fingerprint of the primary signing key (not a signing subkey ID).
 - `PPA_MAINTAINER_NAME` and `PPA_MAINTAINER_EMAIL`: optional source package metadata.
 
 Store the ASCII-armored private key as the `PPA_GPG_PRIVATE_KEY` repository

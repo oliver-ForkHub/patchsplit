@@ -48,7 +48,15 @@ jobs:
       - name: Install Debian packaging tools
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y devscripts dput debhelper
+          sudo apt-get install --no-install-recommends -y \
+            cargo \
+            debhelper \
+            devscripts \
+            dh-cargo \
+            dpkg-dev \
+            dput \
+            librust-thiserror-dev \
+            rustc
 
       - name: Import signing key
         env:
@@ -68,10 +76,22 @@ jobs:
           set -euo pipefail
           version=$(sed -n 's/^patchsplit (\([^ )]*\).*/\1/p' debian/changelog | head -n 1)
           test -n "$version"
-          git archive --format=tar.gz --prefix="patchsplit-${version%%-*}/" HEAD \
-            -o "../patchsplit_${version%%-*}.orig.tar.gz"
-          dpkg-buildpackage -S -sa -d --no-sign
-          debsign -k"$PPA_GPG_KEY_ID" ../patchsplit_${version}_source.changes
+          upstream_version="${version%%-*}"
+          ref="${{ github.event.release.tag_name || inputs.ref || github.sha }}"
+
+          git archive --format=tar.gz --prefix="patchsplit-${upstream_version}/" "$ref" \
+            -o "../patchsplit_${upstream_version}.orig.tar.gz"
+          test -f "../patchsplit_${upstream_version}.orig.tar.gz"
+          ! tar -tzf "../patchsplit_${upstream_version}.orig.tar.gz" \
+            | grep -E '(^|/)(target|debian/cargo_home|debian/cargo_registry)(/|$)'
+
+          dpkg-buildpackage -S -sa -us -uc
+
+          changes="../patchsplit_${version}_source.changes"
+          test -f "$changes"
+          debsign -k"$PPA_GPG_KEY_ID" "$changes"
+          gpg --verify "$changes"
+          gpg --verify "../patchsplit_${version}.dsc"
 
       - name: Upload to Launchpad PPA
         run: |

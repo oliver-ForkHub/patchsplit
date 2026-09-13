@@ -99,7 +99,7 @@ release 默认是草稿，需要在 GitHub Releases 页面检查后手动发布�
 
 - `PPA_OWNER`：Launchpad 账号名。
 - `PPA_NAME`：PPA 名称，不包含 `ppa:` 前缀。
-- `PPA_GPG_KEY_ID`：用于签名的密钥指纹或 ID。
+- `PPA_GPG_KEY_ID`：用于签名的主密钥完整指纹，不要填写签名子密钥 ID。
 - `PPA_MAINTAINER_NAME` 和 `PPA_MAINTAINER_EMAIL`：可选的源包维护者信息。
 
 将 ASCII-armored 格式的私钥保存为仓库 Secret `PPA_GPG_PRIVATE_KEY`。也可以手动运行
