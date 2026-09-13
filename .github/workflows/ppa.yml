@@ -49,13 +49,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
+            build-essential \
             cargo \
             debhelper \
             devscripts \
             dh-cargo \
             dpkg-dev \
             dput \
-            librust-thiserror-dev \
             rustc
 
       - name: Import signing key
@@ -85,7 +85,10 @@ jobs:
           ! tar -tzf "../patchsplit_${upstream_version}.orig.tar.gz" \
             | grep -E '(^|/)(target|debian/cargo_home|debian/cargo_registry)(/|$)'
 
-          dpkg-buildpackage -S -sa -us -uc
+          # Launchpad resolves Build-Depends when it builds the uploaded source.
+          # The GitHub runner may not have the exact dependency versions, so do
+          # not require them for this source-only package build.
+          dpkg-buildpackage -S -sa -us -uc -d
 
           changes="../patchsplit_${version}_source.changes"
           test -f "$changes"
