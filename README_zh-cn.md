@@ -114,6 +114,9 @@ sudo apt install ./patchsplit_<version>_amd64.deb
 sudo dnf install ./patchsplit-*.x86_64.rpm
 ```
 
+如果 release 中同时提供了 debuginfo 包，请安装主包
+`patchsplit-<version>-<release>.x86_64.rpm`，不要安装 debuginfo 包。
+
 ```sh
 tar -xzf patchsplit-linux-x86_64.tar.gz
 chmod +x patchsplit

@@ -113,6 +113,9 @@ asset and install it with:
 sudo dnf install ./patchsplit-*.x86_64.rpm
 ```
 
+If the release also includes a debuginfo package, install the main package
+`patchsplit-<version>-<release>.x86_64.rpm` instead of the debuginfo package.
+
 > [!NOTE]
 > For Arch Linux, use the [`patchsplit-bin`](https://aur.archlinux.org/packages/patchsplit-bin) AUR package
 > maintained by [lingbopro](https://github.com/lingbopro).
