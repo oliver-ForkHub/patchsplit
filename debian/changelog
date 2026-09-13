@@ -1,4 +1,4 @@
-patchsplit (1.0.5-1~ubuntu26.04.1) resolute; urgency=medium
+patchsplit (1.1.0-1~ubuntu26.04.1) resolute; urgency=medium
 
   * Add squash functionality.
 
