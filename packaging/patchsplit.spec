@@ -1,5 +1,5 @@
 Name:           patchsplit
-Version:        1.0.4
+Version:        1.0.5
 Release:        1%{?dist}
 
 Summary:        A tool for splitting patch files
@@ -41,5 +41,8 @@ install -Dm644 packaging/patchsplit.1 \
 %{_mandir}/man1/patchsplit.1*
 
 %changelog
+* Sun Sep 13 2026 Oliver Lin <oliver@liuxiaozhen.dev> - 1.0.5-1
+- Add RPM packages to GitHub releases.
+
 * Sun Sep 13 2026 Oliver Lin <oliver@liuxiaozhen.dev> - 1.0.4-1
 - Initial RPM package
