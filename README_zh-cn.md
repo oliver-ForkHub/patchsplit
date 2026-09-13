@@ -124,6 +124,17 @@ release 默认是草稿，需要在 GitHub Releases 页面检查后手动发布�
 
 ## 安装
 
+`patchsplit` 会调用系统中的 `curl` 下载补丁，请确保 `curl` 位于 `PATH`。Debian/Ubuntu
+软件包会自动声明此依赖。只有从源码构建时才需要 Rust。
+
+### Ubuntu（PPA）
+
+```sh
+sudo add-apt-repository ppa:zitzhen/patchsplit
+sudo apt update
+sudo apt install patchsplit
+```
+
 > [!NOTE]
 > 对于 Arch Linux，使用由 [lingbopro](https://github.com/lingbopro) 维护的
 > [`patchsplit-bin`](https://aur.archlinux.org/packages/patchsplit-bin) AUR 包。
@@ -131,7 +142,7 @@ release 默认是草稿，需要在 GitHub Releases 页面检查后手动发布�
 > - 使用 `paru`: `paru -S patchsplit-bin`
 > - 使用 `yay`: `yay -S patchsplit-bin`
 
-### Linux
+### Debian / Ubuntu（`.deb`）
 
 在 Debian 和 Ubuntu 上，下载 release 中的 `.deb` 文件并执行：
 
@@ -139,7 +150,9 @@ release 默认是草稿，需要在 GitHub Releases 页面检查后手动发布�
 sudo apt install ./patchsplit_<version>_amd64.deb
 ```
 
-在 Fedora、RHEL 及兼容发行版上，下载 release 中的 `.rpm` 文件并执行：
+### Fedora / RHEL 及兼容发行版（`.rpm`）
+
+从 release 下载主 `.rpm` 包，选择不含 `debuginfo` 或 `debugsource` 的 `x86_64` 文件：
 
 ```sh
 sudo dnf install ./patchsplit-*.x86_64.rpm
@@ -148,9 +161,12 @@ sudo dnf install ./patchsplit-*.x86_64.rpm
 如果 release 中同时提供了 debuginfo 包，请安装主包
 `patchsplit-<version>-<release>.x86_64.rpm`，不要安装 debuginfo 包。
 
+### Linux / macOS（预编译二进制）
+
+从 [GitHub Releases](https://github.com/zitzhen/patchsplit/releases) 下载对应平台的压缩包，解压后安装：
+
 ```sh
 tar -xzf patchsplit-linux-x86_64.tar.gz
-chmod +x patchsplit
 sudo install -m 755 patchsplit /usr/local/bin/patchsplit
 patchsplit --version
 ```
@@ -180,3 +196,23 @@ Expand-Archive .\patchsplit-windows-x86_64.zip -DestinationPath .\patchsplit
 ```
 
 需要全局使用时，把解压后的 `patchsplit` 目录加入用户 `Path` 环境变量。
+
+### 从源码安装
+
+```sh
+git clone https://github.com/zitzhen/patchsplit.git
+cd patchsplit
+cargo install --path . --locked
+patchsplit --version
+```
+
+请确保 Cargo 的二进制目录（通常是 `~/.cargo/bin`）位于 `PATH` 中。
+
+## 贡献
+
+欢迎提交 bug、功能建议、文档改进和翻译。请通过 [GitHub Issues](https://github.com/zitzhen/patchsplit/issues)
+提交问题，并附上命令、操作系统、版本及预期和实际行为。代码变更请运行 `cargo test --locked`。
+
+## 许可证
+
+`patchsplit` 使用 [MIT License](LICENSE) 开源。
