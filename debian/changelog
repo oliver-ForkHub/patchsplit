@@ -1,5 +1,11 @@
 patchsplit (1.0.5-1~ubuntu26.04.1) resolute; urgency=medium
 
+  * Add squash functionality.
+
+ -- Oliver <oliver@liuxiaozhen.dev>  Sun, 13 Sep 2026 18:12:00 +0800
+
+patchsplit (1.0.5-1~ubuntu26.04.1) resolute; urgency=medium
+
   * Add RPM packages to GitHub releases.
 
  -- Oliver <oliver@liuxiaozhen.dev>  Sun, 13 Sep 2026 14:45:00 +0800
