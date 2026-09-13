@@ -2,7 +2,7 @@ patchsplit (1.0.5-1) unstable; urgency=medium
 
   * Add RPM packages to GitHub releases.
 
- -- Oliver <oliver@liuxiaozhen.dev> Sun, 13 Sep 2026 12:30:00 +0800
+ -- Oliver <oliver@liuxiaozhen.dev>  Sun, 13 Sep 2026 12:30:00 +0800
 
 patchsplit (1.0.4-1) unstable; urgency=medium
 
