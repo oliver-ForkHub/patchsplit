@@ -12,6 +12,7 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  rust
 BuildRequires:  cargo
+BuildRequires:  gcc
 
 %description
 Patchsplit is a command-line tool for splitting patch files into

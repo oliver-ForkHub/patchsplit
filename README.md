@@ -91,6 +91,7 @@ exist, it will point to the workflow commit. The workflow creates these files:
 - `patchsplit-macos-x86_64.tar.gz`
 - `patchsplit-windows-x86_64.zip`
 - `patchsplit_<version>_amd64.deb`
+- `patchsplit-<version>-<release>.*.x86_64.rpm`
 
 Releases are created as drafts, so they should be reviewed and published from
 the GitHub Releases page.
@@ -103,6 +104,13 @@ On Debian and Ubuntu, download the `.deb` release asset and install it with:
 
 ```sh
 sudo apt install ./patchsplit_<version>_amd64.deb
+```
+
+On Fedora, RHEL, and compatible distributions, download the `.rpm` release
+asset and install it with:
+
+```sh
+sudo dnf install ./patchsplit-<version>-<release>.*.x86_64.rpm
 ```
 
 > [!NOTE]

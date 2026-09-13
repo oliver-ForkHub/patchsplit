@@ -87,6 +87,7 @@ git push origin v1.x.x
 - `patchsplit-macos-x86_64.tar.gz`
 - `patchsplit-windows-x86_64.zip`
 - `patchsplit_<version>_amd64.deb`
+- `patchsplit-<version>-<release>.*.x86_64.rpm`
 
 release 默认是草稿，需要在 GitHub Releases 页面检查后手动发布。
 
@@ -105,6 +106,12 @@ release 默认是草稿，需要在 GitHub Releases 页面检查后手动发布�
 
 ```sh
 sudo apt install ./patchsplit_<version>_amd64.deb
+```
+
+在 Fedora、RHEL 及兼容发行版上，下载 release 中的 `.rpm` 文件并执行：
+
+```sh
+sudo dnf install ./patchsplit-<version>-<release>.*.x86_64.rpm
 ```
 
 ```sh

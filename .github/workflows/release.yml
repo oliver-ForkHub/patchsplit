@@ -35,6 +35,9 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - name: Verify RPM package
+        run: test -n "$(find artifacts -type f -name '*.rpm' -print -quit)"
+
       - name: Create Draft Release
         env:
           GH_TOKEN: ${{ github.token }}
