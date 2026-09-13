@@ -42,7 +42,10 @@ fn run() -> Result<(), AppError> {
     let config = Config::parse(env::args().skip(1))?;
     let url = config.patch_url();
     let patch = download_patch(&url)?;
-    let parts = split_patch_by_commit(&patch);
+    if config.squash && !patch.trim().is_empty() && !patch.starts_with("diff --git ") {
+        return Err(AppError::InvalidDiff);
+    }
+    let parts = config.patch_parts(&patch);
 
     if parts.is_empty() {
         return Err(AppError::EmptyPatch);
@@ -75,6 +78,7 @@ struct Config {
     pull_request: u64,
     output_dir: PathBuf,
     force: bool,
+    squash: bool,
 }
 
 impl Config {
@@ -84,6 +88,7 @@ impl Config {
     {
         let mut output_dir = PathBuf::from("patches");
         let mut force = false;
+        let mut squash = false;
         let mut positionals = Vec::new();
         let mut args = args.into_iter();
 
@@ -92,6 +97,7 @@ impl Config {
                 "-h" | "--help" => return Err(AppError::Help),
                 "-V" | "--version" => return Err(AppError::Version),
                 "-f" | "--force" => force = true,
+                "-s" | "--squash" => squash = true,
                 "-o" | "--out" => {
                     let option = arg.as_str().to_string();
                     let value = args.next().ok_or(AppError::MissingOptionValue(option))?;
@@ -130,14 +136,33 @@ impl Config {
             pull_request,
             output_dir,
             force,
+            squash,
         })
     }
 
     fn patch_url(&self) -> String {
+        // GitHub's PR diff represents the net change; .patch contains each commit.
+        let extension = if self.squash { "diff" } else { "patch" };
         format!(
-            "https://github.com/{}/{}/pull/{}.patch",
+            "https://github.com/{}/{}/pull/{}.{extension}",
             self.owner, self.repo, self.pull_request
         )
+    }
+
+    fn patch_parts(&self, patch: &str) -> Vec<PatchPart> {
+        if !self.squash {
+            return split_patch_by_commit(patch);
+        }
+        if patch.trim().is_empty() {
+            return Vec::new();
+        }
+        vec![PatchPart {
+            index: 1,
+            commit: None,
+            subject: format!("PR #{}", self.pull_request),
+            filename: format!("pr-{}.patch", self.pull_request),
+            content: patch.to_string(),
+        }]
     }
 }
 
@@ -273,6 +298,8 @@ enum AppError {
     PatchNotUtf8(#[from] std::string::FromUtf8Error),
     #[error("downloaded patch is empty")]
     EmptyPatch,
+    #[error("downloaded content is not a Git diff")]
+    InvalidDiff,
     #[error("failed to create output directory {path:?}: {source}")]
     CreateOutputDir {
         path: PathBuf,
@@ -352,6 +379,7 @@ impl AppError {
                 &[("source", source.to_string())],
             ),
             Self::EmptyPatch => tr("downloaded patch is empty"),
+            Self::InvalidDiff => tr("downloaded content is not a Git diff"),
             Self::CreateOutputDir { path, source } => tr_args(
                 "failed to create output directory {path}: {source}",
                 &[
@@ -391,5 +419,45 @@ fn repo_segment_label(kind: &str) -> String {
 }
 
 fn usage() -> String {
-    tr("Usage:\n  patchsplit <owner/repo> <pr-number> [--out <dir>] [--force]\n  patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force]\n\nOptions:\n  -o, --out <dir>   Output directory for split patch files [default: patches]\n  -f, --force       Overwrite existing patch files\n  -h, --help        Show this help\n  -V, --version     Show version\n\nExamples:\n  patchsplit rust-lang/rust 12345\n  patchsplit openai codex 42 -o pr-42-patches")
+    tr("Usage:\n  patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]\n\nOptions:\n  -o, --out <dir>   Output directory for patch files [default: patches]\n  -f, --force       Overwrite existing patch files\n  -s, --squash      Write the PR's net diff as one patch\n  -h, --help        Show this help\n  -V, --version     Show version\n\nExamples:\n  patchsplit rust-lang/rust 12345\n  patchsplit openai codex 42 -o pr-42-patches\n  patchsplit openai/codex 42 --squash")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn config(args: &[&str]) -> Config {
+        Config::parse(args.iter().map(|arg| arg.to_string())).unwrap()
+    }
+
+    #[test]
+    fn default_still_downloads_per_commit_patches() {
+        let config = config(&["owner/repo", "42"]);
+        assert!(!config.squash);
+        assert_eq!(config.patch_url(), "https://github.com/owner/repo/pull/42.patch");
+        let patch = format!(
+            "From {} Mon Sep 17 00:00:00 2001\nSubject: [PATCH 1/2] First\n\nfirst\nFrom {} Mon Sep 17 00:00:00 2001\nSubject: [PATCH 2/2] Second\n\nsecond\n",
+            "1".repeat(40), "2".repeat(40)
+        );
+        assert_eq!(config.patch_parts(&patch).len(), 2);
+    }
+
+    #[test]
+    fn squash_uses_net_diff_for_both_argument_forms() {
+        for args in [
+            vec!["owner/repo", "42", "--squash", "--out=combined", "--force"],
+            vec!["-s", "owner", "repo", "42", "-o", "combined", "-f"],
+        ] {
+            let config = config(&args);
+            assert_eq!(config.patch_url(), "https://github.com/owner/repo/pull/42.diff");
+            assert_eq!(config.output_dir, PathBuf::from("combined"));
+            assert!(config.force);
+            let diff = "diff --git a/file b/file\n--- a/file\n+++ b/file\n@@ -1 +1 @@\n-old\n+final\n";
+            let parts = config.patch_parts(diff);
+            assert_eq!(parts.len(), 1);
+            assert_eq!(parts[0].filename, "pr-42.patch");
+            assert_eq!(parts[0].content, diff);
+            assert!(config.patch_parts(" \n\t").is_empty());
+        }
+    }
 }

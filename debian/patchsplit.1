@@ -26,13 +26,25 @@ patchsplit \- download a GitHub pull request patch and split it by commit
 downloads the patch for a GitHub pull request and splits it into
 individual patch files, one for each commit.
 .PP
+With
+.BR \-\-squash ,
+download the aggregate PR diff and write one
+.B pr-<pr-number>.patch
+containing the net change from the merge base to the PR head.
+Repeated edits are combined and reverted changes disappear.
+The output is a raw diff for git apply, without commit metadata.
+An empty net diff is an error. Binary contents may be omitted by GitHub.
+.PP
 The resulting patch files are written to the
 .B patches
 directory by default.
 .SH OPTIONS
 .TP
+.BR \-s ", " \-\-squash
+Write the PR's net diff as one patch instead of splitting by commit.
+.TP
 .BR \-o ", " \-\-out " " \fIdir\fR
-Write split patch files to
+Write patch files to
 .IR dir .
 The default is
 .BR patches .

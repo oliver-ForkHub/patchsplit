@@ -8,8 +8,8 @@
 ## 用法
 
 ```sh
-patchsplit <owner/repo> <pr-number> [--out <dir>] [--force]
-patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force]
+patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]
+patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]
 ```
 
 示例：
@@ -29,10 +29,25 @@ patches/
 
 如果输出文件已存在，命令默认拒绝覆盖。需要覆盖时传入 `--force`。
 
+### 聚合所有 commit
+
+```sh
+patchsplit openai/codex 42 --squash -o pr-42-patches
+git apply pr-42-patches/pr-42.patch
+```
+
+`-s, --squash` 下载 GitHub 提供的 PR 整体 `.diff`，输出一个
+`pr-<pr-number>.patch`。它表示 PR 从共同祖先（merge base）到最终 head 的净变化：
+同一文件的多次修改会合并，已撤销的修改会消失，不是把各 commit 的补丁拼接起来。
+输出为可在对应基线上用 `git apply` 应用的原始 diff，不包含各 commit 的提交说明和
+作者信息，不能作为 `git am` 邮件补丁使用。净变化为空时会报补丁为空，不生成文件。
+二进制变更受 GitHub diff 返回内容限制，可能不包含二进制文件内容。
+
 ## 参数
 
-- `-o, --out <dir>`：指定拆分后 patch 文件的输出目录。
+- `-o, --out <dir>`：指定 patch 文件的输出目录。
 - `-f, --force`：允许覆盖已存在的 patch 文件。
+- `-s, --squash`：将 PR 的最终净变化输出为一个补丁。
 - `-h, --help`：显示帮助。
 - `-V, --version`：显示版本。
 
@@ -58,6 +73,8 @@ scripts/update-pot.sh
 `po/POTFILES.in`。
 
 ## 构建
+
+在 Unix 上运行测试（`cargo test`）还需要 Git，用于验证聚合补丁应用后的文件树。
 
 ```sh
 cargo build --release
