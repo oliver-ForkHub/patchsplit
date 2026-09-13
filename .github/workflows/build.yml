@@ -126,3 +126,48 @@ jobs:
           name: patchsplit-debian-amd64
           path: debian-artifacts/patchsplit_*.deb
           if-no-files-found: error
+
+  build-rpm:
+    name: Build RPM package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build RPM package in Fedora
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rpm-artifacts
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -n 1)
+          git archive --format=tar.gz --prefix="patchsplit-${version}/" HEAD \
+            -o "patchsplit-${version}.tar.gz"
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" \
+            -v "$GITHUB_WORKSPACE/rpm-artifacts:/artifacts" \
+            -w /tmp \
+            fedora:latest \
+            bash -euxo pipefail -c '
+              dnf install -y \
+                cargo \
+                gcc \
+                make \
+                redhat-rpm-config \
+                rpm-build \
+                rust
+              version=$(sed -n "s/^version = \"\\([^\"]*\\)\"/\\1/p" /workspace/Cargo.toml | head -n 1)
+              topdir=/tmp/rpmbuild
+              mkdir -p "$topdir"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+              cp "/workspace/patchsplit-${version}.tar.gz" "$topdir/SOURCES/"
+              cp /workspace/packaging/patchsplit.spec "$topdir/SPECS/"
+              rpmbuild --define "_topdir $topdir" -bb "$topdir/SPECS/patchsplit.spec"
+              cp "$topdir"/RPMS/*/patchsplit-*.rpm /artifacts/
+            '
+
+      - name: Upload RPM package
+        uses: actions/upload-artifact@v4
+        with:
+          name: patchsplit-rpm-x86_64
+          path: rpm-artifacts/patchsplit-*.rpm
+          if-no-files-found: error

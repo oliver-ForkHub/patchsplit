@@ -19,3 +19,6 @@ debian/cargo-target/
 cargo_home
 cargo_registry
 debian/patchsplit.debhelper.log
+
+# RPM packaging build artifacts
+rpm-artifacts/
