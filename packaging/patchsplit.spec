@@ -1,5 +1,5 @@
 Name:           patchsplit
-Version:        1.1.0
+Version:        1.2.0
 Release:        1%{?dist}
 
 Summary:        A tool for splitting patch files
