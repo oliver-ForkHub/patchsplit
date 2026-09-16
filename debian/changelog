@@ -1,3 +1,9 @@
+patchsplit (1.2.0-1~ubuntu26.04.1) resolute; urgency=medium
+
+  * Add commit mode.
+
+ -- Oliver <oliver@liuxiaozhen.dev>  Wed, 16 Sep 2026 20:10:00 +0800
+
 patchsplit (1.1.0-1~ubuntu26.04.1) resolute; urgency=medium
 
   * Add squash functionality.
