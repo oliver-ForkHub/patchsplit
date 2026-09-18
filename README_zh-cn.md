@@ -2,8 +2,9 @@
 
 语言：[English](README.md) | 简体中文
 
-`patchsplit` 是一个 Rust CLI，用来从 GitHub 下载 Pull Request 或单个 commit 的
-`.patch` 文件，PR 补丁可按 commit 拆分成多个独立 patch 文件。
+`patchsplit` 是一个 Rust CLI，用来从 GitHub 下载 Pull Request、或从 GitLab
+下载合并请求（Merge Request）及单个 commit 的 `.patch` 文件，PR/MR 补丁可按
+commit 拆分成多个独立 patch 文件。
 
 ## 用法
 
@@ -12,6 +13,8 @@ patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]
 patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]
 patchsplit <owner/repo> --commit <hash> [--out <dir>] [--force]
 patchsplit <owner> <repo> --commit <hash> [--out <dir>] [--force]
+patchsplit --gitlab <namespace/project> <mr-number> [--out <dir>] [--force] [--squash]
+patchsplit --gitlab <namespace/project> --commit <hash> [--out <dir>] [--force]
 ```
 
 示例：
@@ -60,11 +63,32 @@ patchsplit zitzhen/patchsplit --commit b4301133226e5c3a464cff9649de0b321c0b0a2e
 `patches/b430113.patch`。它和按 commit 拆分的 PR 补丁一样可用 `git am` 应用。
 `--commit` 不能与 `--squash` 同时使用。
 
+### 从 GitLab 下载
+
+传入 `--gitlab` 即可从 gitlab.com 下载合并请求（Merge Request）或单个 commit。
+项目路径使用 `namespace/project` 格式，并支持子组（subgroup），例如
+`group/subgroup/project`：
+
+```sh
+patchsplit --gitlab zitzhen/patchsplit 1
+patchsplit --gitlab zitzhen/patchsplit --commit fafbad69af7507f41e786aa6685b2fa29716c85f
+patchsplit --gitlab group/subgroup/project 1 --squash -o mr-1-patches
+```
+
+合并请求从
+`https://gitlab.com/<namespace>/<project>/-/merge_requests/<编号>.patch` 下载，
+和 GitHub PR 一样会按 commit 拆分成邮件格式补丁。传入 `--squash` 时下载
+`.diff` 净变化并输出为 `mr-<编号>.patch`。`--commit` 则下载
+`https://gitlab.com/<namespace>/<project>/-/commit/<hash>.patch`，并把补丁原样
+写入 `<hash>.patch`。`--out`、`--force`、`--squash` 的规则与 GitHub 模式相同，
+`--commit` 不能与 `--squash` 同时使用。
+
 ## 参数
 
 - `-o, --out <dir>`：指定 patch 文件的输出目录。
 - `-f, --force`：允许覆盖已存在的 patch 文件。
-- `-s, --squash`：将 PR 的最终净变化输出为一个补丁。
+- `-s, --squash`：将 PR/MR 的最终净变化输出为一个补丁。
+- `--gitlab`：改为从 gitlab.com 下载合并请求或单个 commit（项目路径支持子组）。
 - `--commit <hash>`：下载单个 commit 的 `.patch`，接受短哈希或完整哈希。
 - `-h, --help`：显示帮助。
 - `-V, --version`：显示版本。

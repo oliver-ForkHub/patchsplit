@@ -2,18 +2,20 @@
 
 Language: English | [Simplified Chinese](README_zh-cn.md)
 
-Download GitHub pull requests or individual commits as patches, one file per
-commit or one combined diff.
+Download GitHub pull requests, GitLab merge requests, or individual commits as
+patches, one file per commit or one combined diff.
 
 `patchsplit` is a command-line tool written in Rust. It fetches patches directly
-from GitHub without cloning the repository, making it useful for reviewing,
-sharing, and applying changes locally.
+from GitHub or GitLab without cloning the repository, making it useful for
+reviewing, sharing, and applying changes locally.
 
 - **Per-commit patches:** Keep the original patch content, commit messages, and
   authorship, with numbered filenames in commit order.
 - **Single commit:** Use `--commit <hash>` to download one commit's `.patch`
   with either a short or full hash.
-- **Combined diff:** Use `--squash` to export the PR's net changes as a single patch.
+- **GitLab support:** Pass `--gitlab` to fetch merge requests and commits from
+  gitlab.com, including projects nested under subgroups.
+- **Combined diff:** Use `--squash` to export the request's net changes as a single patch.
 - **Predictable output:** Choose an output directory; existing files are only
   overwritten when you pass `--force`.
 - **Localized CLI:** English and built-in Simplified Chinese messages.
@@ -142,6 +144,8 @@ patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]
 patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]
 patchsplit <owner/repo> --commit <hash> [--out <dir>] [--force]
 patchsplit <owner> <repo> --commit <hash> [--out <dir>] [--force]
+patchsplit --gitlab <namespace/project> <mr-number> [--out <dir>] [--force] [--squash]
+patchsplit --gitlab <namespace/project> --commit <hash> [--out <dir>] [--force]
 ```
 
 ### Split a pull request by commit
@@ -193,9 +197,12 @@ git apply /path/to/pr-42-patches/pr-42.patch
 
 | Mode | Output | Commit messages and authorship | Apply with |
 | --- | --- | --- | --- |
-| Default | One numbered patch per commit | Preserved | `git am` |
-| `--squash` | One `pr-<pr-number>.patch` | Not included | `git apply` |
-| `--commit <hash>` | One `<hash>.patch` | Preserved | `git am` |
+| Default (GitHub PR) | One numbered patch per commit | Preserved | `git am` |
+| `--squash` (GitHub PR) | One `pr-<pr-number>.patch` | Not included | `git apply` |
+| `--commit <hash>` (GitHub) | One `<hash>.patch` | Preserved | `git am` |
+| `--gitlab` (GitLab MR) | One numbered patch per commit | Preserved | `git am` |
+| `--gitlab --squash` | One `mr-<mr-number>.patch` | Not included | `git apply` |
+| `--gitlab --commit <hash>` | One `<hash>.patch` | Preserved | `git am` |
 
 The combined output is a raw diff, not a `git am` mailbox. An empty net diff
 is reported as an error and no file is written. Binary changes are limited to
@@ -216,13 +223,35 @@ the commit's mail-formatted patch verbatim to `<hash>.patch` in the output
 directory, for example `patches/b430113.patch`. Apply it with `git am` just
 like a per-commit PR patch. `--commit` cannot be combined with `--squash`.
 
+### Download from GitLab
+
+Pass `--gitlab` to download a GitLab merge request or commit from gitlab.com.
+The project path uses `namespace/project` form and may contain subgroups, for
+example `group/subgroup/project`:
+
+```sh
+patchsplit --gitlab zitzhen/patchsplit 1
+patchsplit --gitlab zitzhen/patchsplit --commit fafbad69af7507f41e786aa6685b2fa29716c85f
+patchsplit --gitlab group/subgroup/project 1 --squash -o mr-1-patches
+```
+
+A merge request is fetched from
+`https://gitlab.com/<namespace>/<project>/-/merge_requests/<number>.patch` and,
+just like a GitHub PR, split into one mail-formatted patch per commit. With
+`--squash`, the request's `.diff` net change is written to
+`mr-<number>.patch`. A `--commit` download fetches
+`https://gitlab.com/<namespace>/<project>/-/commit/<hash>.patch` and writes the
+verbatim patch to `<hash>.patch`. The same `--out`, `--force`, and `--squash`
+rules apply, and `--commit` cannot be combined with `--squash`.
+
 ### Options
 
 | Option | Description |
 | --- | --- |
 | `-o, --out <dir>` | Output directory (default: `patches/`). |
 | `-f, --force` | Overwrite existing patch files. |
-| `-s, --squash` | Write the PR's net diff as one patch. |
+| `-s, --squash` | Write the request's net diff as one patch. |
+| `--gitlab` | Download a merge request or commit from gitlab.com. |
 | `--commit <hash>` | Download one commit's `.patch`; accepts a short or full hash. |
 | `-h, --help` | Show help. |
 | `-V, --version` | Show version. |
