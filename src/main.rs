@@ -634,8 +634,9 @@ fn repo_segment_label(kind: &str) -> String {
 }
 
 fn usage() -> String {
-    tr("Usage:\n  patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner/repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit <owner> <repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit --gitlab <namespace/project> <mr-number> [--out <dir>] [--force] [--squash]\n  patchsplit --gitlab <namespace/project> --commit <hash> [--out <dir>] [--force]\n\nOptions:\n  -o, --out <dir>   Output directory for patch files [default: patches]\n  -f, --force       Overwrite existing patch files\n  -s, --squash      Write the net diff as one patch instead of splitting by commit\n      --gitlab      Download from gitlab.com (merge requests and commits
-#[cfg(test)]
+    tr("Usage:\n  patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner/repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit <owner> <repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit --gitlab <namespace/project> <mr-number> [--out <dir>] [--force] [--squash]\n  patchsplit --gitlab <namespace/project> --commit <hash> [--out <dir>] [--force]\n\nOptions:\n  -o, --out <dir>   Output directory for patch files [default: patches]\n  -f, --force       Overwrite existing patch files\n  -s, --squash      Write the net diff as one patch instead of splitting by commit\n      --gitlab      Download from gitlab.com (merge requests and commits)\n      --commit <hash> Download one commit's .patch (short or full hash)\n  -h, --help        Show this help\n  -V, --version     Show version\n\nExamples:\n  patchsplit rust-lang/rust 12345\n  patchsplit openai codex 42 -o pr-42-patches\n  patchsplit openai/codex 42 --squash\n  patchsplit zitzhen patchsplit -commit b430113\n  patchsplit --gitlab zitzhen/patchsplit 1")
+}
+    #[cfg(test)]
 mod tests {
     use super::*;
 
