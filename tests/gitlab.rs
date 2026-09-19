@@ -127,7 +127,7 @@ esac\n",
     let result = run(&[
         "--gitlab",
         PROJECT,
-        "363",
+        "1",
         "--out",
         mr_dir.to_str().unwrap(),
     ]);
@@ -147,7 +147,7 @@ esac\n",
     let squash_dir = root.0.join("squash");
     let result = run(&[
         PROJECT,
-        "363",
+        "1",
         "--gitlab",
         "--squash",
         "--out",
@@ -158,7 +158,7 @@ esac\n",
         "{}",
         String::from_utf8_lossy(&result.stderr)
     );
-    let squashed = squash_dir.join("mr-363.patch");
+    let squashed = squash_dir.join("mr-1.patch");
     assert_eq!(fs::read(&squashed).unwrap(), mr_diff_body().as_bytes());
 
     // Single commit by short hash.
@@ -182,7 +182,7 @@ esac\n",
     );
 
     // A project path without a namespace is rejected with exit code 2.
-    let bad = run(&["--gitlab", "project-only", "363"]);
+    let bad = run(&["--gitlab", "project-only", "1"]);
     assert_eq!(bad.status.code(), Some(2));
     assert!(
         String::from_utf8_lossy(&bad.stderr).contains("namespace/project"),
