@@ -1,6 +1,6 @@
-.TH PATCHSPLIT 1 "August 2026" "patchsplit 1.0.2" "User Commands"
+.TH PATCHSPLIT 1 "September 2026" "patchsplit 1.2.0" "User Commands"
 .SH NAME
-patchsplit \- download a GitHub pull request patch, split it by commit, or fetch a single commit patch
+patchsplit \- download GitHub pull request or GitLab merge request patches, split them by commit, or fetch a single commit patch
 .SH SYNOPSIS
 .B patchsplit
 .RI < owner/repo > " <pr-number>"
@@ -41,6 +41,30 @@ patchsplit \- download a GitHub pull request patch, split it by commit, or fetch
 [\c
 .B \-\-force ]
 .RE
+.br
+.B patchsplit
+.B \-\-gitlab
+.RI < namespace/project > " <mr-number>"
+.RS
+[\c
+.B \-\-out
+.IR dir ]
+[\c
+.B \-\-force ]
+[\c
+.B \-\-squash ]
+.RE
+.br
+.B patchsplit
+.B \-\-gitlab
+.RI < namespace/project > " \-\-commit <hash>"
+.RS
+[\c
+.B \-\-out
+.IR dir ]
+[\c
+.B \-\-force ]
+.RE
 .SH DESCRIPTION
 .B patchsplit
 downloads the patch for a GitHub pull request and splits it into
@@ -65,13 +89,41 @@ The result is a mail-formatted patch for git am.
 cannot be combined with
 .BR \-\-squash .
 .PP
+With
+.BR \-\-gitlab ,
+download patches from GitLab
+.RB ( gitlab.com )
+instead of GitHub.
+The merge request
+.B https://gitlab.com/<namespace>/<project>/-/merge_requests/<number>.patch
+is split into one patch per commit just like a GitHub pull request, while
+.B \-\-squash
+downloads the
+.B .diff
+net change and writes it to
+.BR mr-<number>.patch .
+The project path uses
+.I namespace/project
+form and may contain subgroups, for example
+.IR group/subgroup/project .
+With
+.BR \-\-gitlab " " \-\-commit " " \fIhash\fR ,
+fetch
+.BR https://gitlab.com/<namespace>/<project>/-/commit/<hash>.patch .
+.PP
 The resulting patch files are written to the
 .B patches
 directory by default.
 .SH OPTIONS
 .TP
 .BR \-s ", " \-\-squash
-Write the PR's net diff as one patch instead of splitting by commit.
+Write the request's net diff as one patch instead of splitting by commit.
+.TP
+.B \-\-gitlab
+Download a merge request or commit patch from gitlab.com instead of GitHub.
+The project argument uses
+.I namespace/project
+form and may contain subgroups.
 .TP
 .BR \-\-commit " " \fIhash\fR
 Download the .patch of a single commit instead of a pull request.
@@ -114,11 +166,20 @@ Download the patch for commit b430113 from
 .BR zitzhen/patchsplit
 and write it to
 .BR b430113.patch .
+.TP
+.B patchsplit \-\-gitlab zitzhen/patchsplit 1
+Download and split merge request 1 from the GitLab project
+.BR zitzhen/patchsplit .
+.TP
+.B patchsplit \-\-gitlab zitzhen/patchsplit \-\-commit de9ea1a
+Download the patch for commit de9ea1a from GitLab and write it to
+.BR de9ea1a.patch .
 .SH REQUIREMENTS
 .B patchsplit
 uses
 .B curl
-to download pull request and commit patches from GitHub.
+to download pull request, merge request, and commit patches from GitHub and
+GitLab.
 .SH SEE ALSO
 .BR curl (1)
 .SH AUTHORS

@@ -73,17 +73,24 @@ fn run() -> Result<(), AppError> {
 
 #[derive(Debug)]
 struct Config {
-    owner: String,
-    repo: String,
+    /// `owner/repo` on GitHub or `namespace/project` (subgroups allowed) on GitLab.
+    project: String,
+    platform: Platform,
     target: Target,
     output_dir: PathBuf,
     force: bool,
     squash: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Platform {
+    GitHub,
+    GitLab,
+}
+
 #[derive(Debug)]
 enum Target {
-    PullRequest(u64),
+    MergeRequest(u64),
     Commit(String),
 }
 
@@ -95,6 +102,7 @@ impl Config {
         let mut output_dir = PathBuf::from("patches");
         let mut force = false;
         let mut squash = false;
+        let mut gitlab = false;
         let mut commit = None;
         let mut positionals = Vec::new();
         let mut args = args.into_iter();
@@ -105,6 +113,7 @@ impl Config {
                 "-V" | "--version" => return Err(AppError::Version),
                 "-f" | "--force" => force = true,
                 "-s" | "--squash" => squash = true,
+                "--gitlab" => gitlab = true,
                 "-o" | "--out" => {
                     let option = arg.as_str().to_string();
                     let value = args.next().ok_or(AppError::MissingOptionValue(option))?;
@@ -136,44 +145,82 @@ impl Config {
             return Err(AppError::CommitWithSquash);
         }
 
-        let (owner, repo, target) = match commit {
-            Some(hash) => {
-                let (owner, repo) = match positionals.as_slice() {
-                    [repo_spec] => parse_repo_spec(repo_spec)?,
-                    [owner, repo] => {
-                        validate_repo_segment("owner", owner)?;
-                        validate_repo_segment("repo", repo)?;
-                        (owner.clone(), repo.clone())
+        let platform = if gitlab {
+            Platform::GitLab
+        } else {
+            Platform::GitHub
+        };
+
+        let (project, target) = match platform {
+            Platform::GitHub => match commit {
+                Some(hash) => {
+                    let (owner, repo) = match positionals.as_slice() {
+                        [repo_spec] => parse_repo_spec(repo_spec)?,
+                        [owner, repo] => {
+                            validate_repo_segment("owner", owner)?;
+                            validate_repo_segment("repo", repo)?;
+                            (owner.clone(), repo.clone())
+                        }
+                        _ => return Err(AppError::InvalidCommitArguments),
+                    };
+                    validate_commit_hash(&hash)?;
+                    (format!("{owner}/{repo}"), Target::Commit(hash))
+                }
+                None => {
+                    let (owner, repo, pull_request) = match positionals.as_slice() {
+                        [repo_spec, pull_request] => {
+                            let (owner, repo) = parse_repo_spec(repo_spec)?;
+                            (owner, repo, parse_pull_request(pull_request)?)
+                        }
+                        [owner, repo, pull_request] => {
+                            validate_repo_segment("owner", owner)?;
+                            validate_repo_segment("repo", repo)?;
+                            (
+                                owner.clone(),
+                                repo.clone(),
+                                parse_pull_request(pull_request)?,
+                            )
+                        }
+                        _ => return Err(AppError::InvalidArguments),
+                    };
+                    (
+                        format!("{owner}/{repo}"),
+                        Target::MergeRequest(pull_request),
+                    )
+                }
+            },
+            Platform::GitLab => {
+                // GitLab project paths may contain subgroups, e.g. group/subgroup/project.
+                match commit {
+                    Some(hash) => {
+                        if positionals.is_empty() {
+                            return Err(AppError::InvalidGitLabCommitArguments);
+                        }
+                        let project = positionals.join("/");
+                        validate_gitlab_project(&project)?;
+                        validate_commit_hash(&hash)?;
+                        (project, Target::Commit(hash))
                     }
-                    _ => return Err(AppError::InvalidCommitArguments),
-                };
-                validate_commit_hash(&hash)?;
-                (owner, repo, Target::Commit(hash))
-            }
-            None => {
-                let (owner, repo, pull_request) = match positionals.as_slice() {
-                    [repo_spec, pull_request] => {
-                        let (owner, repo) = parse_repo_spec(repo_spec)?;
-                        (owner, repo, parse_pull_request(pull_request)?)
+                    None => {
+                        let Some((merge_request, project_parts)) = positionals.split_last()
+                        else {
+                            return Err(AppError::InvalidGitLabArguments);
+                        };
+                        if project_parts.is_empty() {
+                            return Err(AppError::InvalidGitLabArguments);
+                        }
+                        let project = project_parts.join("/");
+                        validate_gitlab_project(&project)?;
+                        let merge_request = parse_merge_request(merge_request)?;
+                        (project, Target::MergeRequest(merge_request))
                     }
-                    [owner, repo, pull_request] => {
-                        validate_repo_segment("owner", owner)?;
-                        validate_repo_segment("repo", repo)?;
-                        (
-                            owner.clone(),
-                            repo.clone(),
-                            parse_pull_request(pull_request)?,
-                        )
-                    }
-                    _ => return Err(AppError::InvalidArguments),
-                };
-                (owner, repo, Target::PullRequest(pull_request))
+                }
             }
         };
 
         Ok(Self {
-            owner,
-            repo,
+            project,
+            platform,
             target,
             output_dir,
             force,
@@ -182,19 +229,32 @@ impl Config {
     }
 
     fn patch_url(&self) -> String {
-        match &self.target {
-            // GitHub's PR diff represents the net change; .patch contains each commit.
-            Target::PullRequest(pull_request) => {
-                let extension = if self.squash { "diff" } else { "patch" };
-                format!(
-                    "https://github.com/{}/{}/pull/{}.{extension}",
-                    self.owner, self.repo, pull_request
-                )
-            }
-            Target::Commit(hash) => format!(
-                "https://github.com/{}/{}/commit/{}.patch",
-                self.owner, self.repo, hash
-            ),
+        match self.platform {
+            Platform::GitHub => match &self.target {
+                // GitHub's PR diff represents the net change; .patch contains each commit.
+                Target::MergeRequest(pull_request) => {
+                    let extension = if self.squash { "diff" } else { "patch" };
+                    format!(
+                        "https://github.com/{}/pull/{}.{extension}",
+                        self.project, pull_request
+                    )
+                }
+                Target::Commit(hash) => {
+                    format!("https://github.com/{}/commit/{hash}.patch", self.project)
+                }
+            },
+            Platform::GitLab => match &self.target {
+                Target::MergeRequest(merge_request) => {
+                    let extension = if self.squash { "diff" } else { "patch" };
+                    format!(
+                        "https://gitlab.com/{}/-/merge_requests/{}.{extension}",
+                        self.project, merge_request
+                    )
+                }
+                Target::Commit(hash) => {
+                    format!("https://gitlab.com/{}/-/commit/{hash}.patch", self.project)
+                }
+            },
         }
     }
 
@@ -213,18 +273,22 @@ impl Config {
                     content: patch.to_string(),
                 }]
             }
-            Target::PullRequest(pull_request) => {
+            Target::MergeRequest(number) => {
                 if !self.squash {
                     return split_patch_by_commit(patch);
                 }
                 if patch.trim().is_empty() {
                     return Vec::new();
                 }
+                let (subject, filename) = match self.platform {
+                    Platform::GitHub => (format!("PR #{number}"), format!("pr-{number}.patch")),
+                    Platform::GitLab => (format!("MR #{number}"), format!("mr-{number}.patch")),
+                };
                 vec![PatchPart {
                     index: 1,
                     commit: None,
-                    subject: format!("PR #{pull_request}"),
-                    filename: format!("pr-{pull_request}.patch"),
+                    subject,
+                    filename,
                     content: patch.to_string(),
                 }]
             }
@@ -270,6 +334,36 @@ fn parse_pull_request(value: &str) -> Result<u64, AppError> {
         Err(AppError::InvalidPullRequest(value.to_string()))
     } else {
         Ok(pull_request)
+    }
+}
+
+fn parse_merge_request(value: &str) -> Result<u64, AppError> {
+    let merge_request = value
+        .parse::<u64>()
+        .map_err(|_| AppError::InvalidMergeRequest(value.to_string()))?;
+
+    if merge_request == 0 {
+        Err(AppError::InvalidMergeRequest(value.to_string()))
+    } else {
+        Ok(merge_request)
+    }
+}
+
+fn validate_gitlab_project(value: &str) -> Result<(), AppError> {
+    // GitLab projects live under a namespace and may be nested in subgroups.
+    let segments: Vec<&str> = value.split('/').collect();
+    let valid = segments.len() >= 2
+        && segments.iter().all(|segment| {
+            !segment.is_empty()
+                && !segment
+                    .chars()
+                    .any(|character| character.is_whitespace() || character.is_control())
+        });
+
+    if valid {
+        Ok(())
+    } else {
+        Err(AppError::InvalidGitLabProject(value.to_string()))
     }
 }
 
@@ -363,6 +457,14 @@ enum AppError {
     InvalidPullRequest(String),
     #[error("expected a GitHub repository with --commit <hash>")]
     InvalidCommitArguments,
+    #[error("expected a GitLab project and merge request number")]
+    InvalidGitLabArguments,
+    #[error("expected a GitLab project with --commit <hash>")]
+    InvalidGitLabCommitArguments,
+    #[error("GitLab project must use namespace/project form (subgroups allowed), got {0:?}")]
+    InvalidGitLabProject(String),
+    #[error("merge request number must be a positive integer, got {0:?}")]
+    InvalidMergeRequest(String),
     #[error("commit hash must consist of 4 to 40 hexadecimal characters, got {0:?}")]
     InvalidCommitHash(String),
     #[error("--commit cannot be combined with --squash")]
@@ -404,6 +506,10 @@ impl AppError {
             | Self::InvalidRepoSegment { .. }
             | Self::InvalidPullRequest(_)
             | Self::InvalidCommitArguments
+            | Self::InvalidGitLabArguments
+            | Self::InvalidGitLabCommitArguments
+            | Self::InvalidGitLabProject(_)
+            | Self::InvalidMergeRequest(_)
             | Self::InvalidCommitHash(_)
             | Self::CommitWithSquash
             | Self::MissingOptionValue(_)
@@ -433,6 +539,20 @@ impl AppError {
             Self::InvalidCommitArguments => {
                 tr("expected a GitHub repository with --commit <hash>")
             }
+            Self::InvalidGitLabArguments => {
+                tr("expected a GitLab project and merge request number")
+            }
+            Self::InvalidGitLabCommitArguments => {
+                tr("expected a GitLab project with --commit <hash>")
+            }
+            Self::InvalidGitLabProject(value) => tr_args(
+                "GitLab project must use namespace/project form (subgroups allowed), got {value}",
+                &[("value", quoted(value))],
+            ),
+            Self::InvalidMergeRequest(value) => tr_args(
+                "merge request number must be a positive integer, got {value}",
+                &[("value", quoted(value))],
+            ),
             Self::InvalidCommitHash(value) => tr_args(
                 "commit hash must consist of 4 to 40 hexadecimal characters, got {value}",
                 &[("value", quoted(value))],
@@ -514,10 +634,9 @@ fn repo_segment_label(kind: &str) -> String {
 }
 
 fn usage() -> String {
-    tr("Usage:\n  patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner/repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit <owner> <repo> --commit <hash> [--out <dir>] [--force]\n\nOptions:\n  -o, --out <dir>   Output directory for patch files [default: patches]\n  -f, --force       Overwrite existing patch files\n  -s, --squash      Write the PR's net diff as one patch\n      --commit <hash> Download one commit's .patch (short or full hash)\n  -h, --help        Show this help\n  -V, --version     Show version\n\nExamples:\n  patchsplit rust-lang/rust 12345\n  patchsplit openai codex 42 -o pr-42-patches\n  patchsplit openai/codex 42 --squash\n  patchsplit zitzhen patchsplit -commit b430113")
+    tr("Usage:\n  patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner/repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit <owner> <repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit --gitlab <namespace/project> <mr-number> [--out <dir>] [--force] [--squash]\n  patchsplit --gitlab <namespace/project> --commit <hash> [--out <dir>] [--force]\n\nOptions:\n  -o, --out <dir>   Output directory for patch files [default: patches]\n  -f, --force       Overwrite existing patch files\n  -s, --squash      Write the net diff as one patch instead of splitting by commit\n      --gitlab      Download from gitlab.com (merge requests and commits)\n      --commit <hash> Download one commit's .patch (short or full hash)\n  -h, --help        Show this help\n  -V, --version     Show version\n\nExamples:\n  patchsplit rust-lang/rust 12345\n  patchsplit openai codex 42 -o pr-42-patches\n  patchsplit openai/codex 42 --squash\n  patchsplit zitzhen patchsplit -commit b430113\n  patchsplit --gitlab zitzhen/patchsplit 1")
 }
-
-#[cfg(test)]
+    #[cfg(test)]
 mod tests {
     use super::*;
 
@@ -610,9 +729,136 @@ mod tests {
                 .contains("InvalidCommitArguments")
         );
         assert!(parse_err(&["--commit", "b430113"]).contains("InvalidCommitArguments"));
-        assert!(
-            parse_err(&["owner/repo", "42", "--commit", "b430113", "--squash"])
+        assert!(parse_err(&["owner/repo", "42", "--commit", "b430113", "--squash"])
                 .contains("CommitWithSquash")
+        );
+    }
+
+    #[test]
+    fn gitlab_merge_request_downloads_per_commit_patches() {
+        let config = config(&["--gitlab", "zitzhen/patchsplit", "1"]);
+        assert_eq!(config.platform, Platform::GitLab);
+        assert_eq!(config.project, "zitzhen/patchsplit");
+        assert_eq!(
+            config.patch_url(),
+            "https://gitlab.com/zitzhen/patchsplit/-/merge_requests/1.patch"
+        );
+        let patch = format!(
+            "From {} Mon Sep 17 00:00:00 2001\nSubject: [PATCH 1/2] First\n\nfirst\nFrom {} Mon Sep 17 00:00:00 2001\nSubject: [PATCH 2/2] Second\n\nsecond\n",
+            "1".repeat(40),
+            "2".repeat(40)
+        );
+        assert_eq!(config.patch_parts(&patch).len(), 2);
+    }
+
+    #[test]
+    fn gitlab_squash_writes_one_mr_named_diff() {
+        let config = config(&[
+            "--gitlab",
+            "zitzhen/patchsplit",
+            "1",
+            "--squash",
+            "--force",
+        ]);
+        assert_eq!(config.project, "zitzhen/patchsplit");
+        assert_eq!(
+            config.patch_url(),
+            "https://gitlab.com/zitzhen/patchsplit/-/merge_requests/1.diff"
+        );
+        let diff = "diff --git a/file b/file\n--- a/file\n+++ b/file\n@@ -1 +1 @@\n-old\n+new\n";
+        let parts = config.patch_parts(diff);
+        assert_eq!(parts.len(), 1);
+        assert_eq!(parts[0].subject, "MR #1");
+        assert_eq!(parts[0].filename, "mr-1.patch");
+        assert_eq!(parts[0].content, diff);
+    }
+
+    #[test]
+    fn gitlab_commit_mode_downloads_a_single_commit_patch() {
+        const FULL_HASH: &str = "fafbad69af7507f41e786aa6685b2fa29716c85f";
+        let project = "zitzhen/patchsplit";
+        let full_commit_option = format!("--commit={FULL_HASH}");
+        let cases: Vec<(Vec<&str>, &str)> = vec![
+            (
+                vec!["--gitlab", project, "--commit", "fafbad6"],
+                "fafbad6",
+            ),
+            (
+                vec![
+                    "--gitlab",
+                    "zitzhen",
+                    "patchsplit",
+                    "--commit",
+                    "de9ea1a",
+                ],
+                "de9ea1a",
+            ),
+            (
+                vec!["--gitlab", project, &full_commit_option],
+                FULL_HASH,
+            ),
+            (
+                vec![
+                    "--gitlab",
+                    "group/subgroup",
+                    "project",
+                    "--commit",
+                    "de9ea1a",
+                ],
+                "de9ea1a",
+            ),
+        ];
+        let patch = format!(
+            "From {FULL_HASH} Mon Sep 17 00:00:00 2001\nSubject: [PATCH] One\n\ndiff --git a/a b/a\n"
+        );
+
+        for (args, hash) in cases {
+            let config = config(&args);
+            assert_eq!(config.platform, Platform::GitLab);
+            assert_eq!(
+                config.patch_url(),
+                format!(
+                    "https://gitlab.com/{}/-/commit/{hash}.patch",
+                    config.project
+                )
+            );
+            let parts = config.patch_parts(&patch);
+            assert_eq!(parts.len(), 1);
+            assert_eq!(parts[0].filename, format!("{hash}.patch"));
+        }
+    }
+
+    #[test]
+    fn gitlab_mode_validates_project_numbers_and_arguments() {
+        fn parse_err(args: &[&str]) -> String {
+            let error = Config::parse(args.iter().map(|arg| arg.to_string())).unwrap_err();
+            format!("{error:?}")
+        }
+
+        assert!(parse_err(&["--gitlab", "project-without-namespace", "363"])
+            .contains("InvalidGitLabProject"));
+        assert!(parse_err(&["--gitlab", "group//project", "363"]).contains("InvalidGitLabProject"));
+        assert!(parse_err(&["--gitlab", "group/project", "0"]).contains("InvalidMergeRequest"));
+        assert!(parse_err(&["--gitlab", "group/project", "abc"])
+            .contains("InvalidMergeRequest"));
+        assert!(parse_err(&["--gitlab", "363"]).contains("InvalidGitLabArguments"));
+        assert!(parse_err(&["--gitlab"]).contains("InvalidGitLabArguments"));
+        assert!(
+            parse_err(&["--gitlab", "--commit", "de9ea1a"])
+                .contains("InvalidGitLabCommitArguments")
+        );
+        assert!(parse_err(&["--gitlab", "group/project", "--commit", "xyz"])
+            .contains("InvalidCommitHash"));
+        assert!(
+            parse_err(&[
+                "--gitlab",
+                "group/project",
+                "363",
+                "--commit",
+                "de9ea1a",
+                "--squash"
+            ])
+            .contains("CommitWithSquash")
         );
     }
 }
