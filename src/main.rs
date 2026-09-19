@@ -634,9 +634,7 @@ fn repo_segment_label(kind: &str) -> String {
 }
 
 fn usage() -> String {
-    tr("Usage:\n  patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner/repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit <owner> <repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit --gitlab <namespace/project> <mr-number> [--out <dir>] [--force] [--squash]\n  patchsplit --gitlab <namespace/project> --commit <hash> [--out <dir>] [--force]\n\nOptions:\n  -o, --out <dir>   Output directory for patch files [default: patches]\n  -f, --force       Overwrite existing patch files\n  -s, --squash      Write the net diff as one patch instead of splitting by commit\n      --gitlab      Download from gitlab.com (merge requests and commits)\n      --commit <hash> Download one commit's .patch (short or full hash)\n  -h, --help        Show this help\n  -V, --version     Show version\n\nExamples:\n  patchsplit rust-lang/rust 12345\n  patchsplit openai codex 42 -o pr-42-patches\n  patchsplit openai/codex 42 --squash\n  patchsplit zitzhen patchsplit -commit b430113\n  patchsplit --gitlab zitzhen/coco-community-control 363")
-}
-
+    tr("Usage:\n  patchsplit <owner/repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner> <repo> <pr-number> [--out <dir>] [--force] [--squash]\n  patchsplit <owner/repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit <owner> <repo> --commit <hash> [--out <dir>] [--force]\n  patchsplit --gitlab <namespace/project> <mr-number> [--out <dir>] [--force] [--squash]\n  patchsplit --gitlab <namespace/project> --commit <hash> [--out <dir>] [--force]\n\nOptions:\n  -o, --out <dir>   Output directory for patch files [default: patches]\n  -f, --force       Overwrite existing patch files\n  -s, --squash      Write the net diff as one patch instead of splitting by commit\n      --gitlab      Download from gitlab.com (merge requests and commits
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -737,12 +735,12 @@ mod tests {
 
     #[test]
     fn gitlab_merge_request_downloads_per_commit_patches() {
-        let config = config(&["--gitlab", "zitzhen/coco-community-control", "363"]);
+        let config = config(&["--gitlab", "zitzhen/patchsplit", "1"]);
         assert_eq!(config.platform, Platform::GitLab);
-        assert_eq!(config.project, "zitzhen/coco-community-control");
+        assert_eq!(config.project, "zitzhen/patchsplit");
         assert_eq!(
             config.patch_url(),
-            "https://gitlab.com/zitzhen/coco-community-control/-/merge_requests/363.patch"
+            "https://gitlab.com/zitzhen/patchsplit/-/merge_requests/1.patch"
         );
         let patch = format!(
             "From {} Mon Sep 17 00:00:00 2001\nSubject: [PATCH 1/2] First\n\nfirst\nFrom {} Mon Sep 17 00:00:00 2001\nSubject: [PATCH 2/2] Second\n\nsecond\n",
@@ -756,39 +754,39 @@ mod tests {
     fn gitlab_squash_writes_one_mr_named_diff() {
         let config = config(&[
             "--gitlab",
-            "group/subgroup/project",
-            "363",
+            "zitzhen/patchsplit",
+            "1",
             "--squash",
             "--force",
         ]);
-        assert_eq!(config.project, "group/subgroup/project");
+        assert_eq!(config.project, "zitzhen/patchsplit");
         assert_eq!(
             config.patch_url(),
-            "https://gitlab.com/group/subgroup/project/-/merge_requests/363.diff"
+            "https://gitlab.com/zitzhen/patchsplit/-/merge_requests/1.diff"
         );
         let diff = "diff --git a/file b/file\n--- a/file\n+++ b/file\n@@ -1 +1 @@\n-old\n+new\n";
         let parts = config.patch_parts(diff);
         assert_eq!(parts.len(), 1);
-        assert_eq!(parts[0].subject, "MR #363");
-        assert_eq!(parts[0].filename, "mr-363.patch");
+        assert_eq!(parts[0].subject, "MR #1");
+        assert_eq!(parts[0].filename, "mr-1.patch");
         assert_eq!(parts[0].content, diff);
     }
 
     #[test]
     fn gitlab_commit_mode_downloads_a_single_commit_patch() {
-        const FULL_HASH: &str = "de9ea1a4a3f6ad6b0ade271b958bf05142f8be89";
-        let project = "zitzhen/coco-community-control";
+        const FULL_HASH: &str = "fafbad69af7507f41e786aa6685b2fa29716c85f";
+        let project = "zitzhen/patchsplit";
         let full_commit_option = format!("--commit={FULL_HASH}");
         let cases: Vec<(Vec<&str>, &str)> = vec![
             (
-                vec!["--gitlab", project, "--commit", "de9ea1a"],
-                "de9ea1a",
+                vec!["--gitlab", project, "--commit", "fafbad6"],
+                "fafbad6",
             ),
             (
                 vec![
                     "--gitlab",
                     "zitzhen",
-                    "coco-community-control",
+                    "patchsplit",
                     "--commit",
                     "de9ea1a",
                 ],

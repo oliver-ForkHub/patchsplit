@@ -14,7 +14,7 @@ impl Drop for Workspace {
     }
 }
 
-const PROJECT: &str = "zitzhen/coco-community-control";
+const PROJECT: &str = "zitzhen/patchsplit";
 const SHORT_HASH: &str = "de9ea1a";
 const FULL_HASH: &str = "de9ea1a4a3f6ad6b0ade271b958bf05142f8be89";
 
@@ -93,11 +93,11 @@ fn gitlab_cli_downloads_mr_squash_and_commit_patches() {
         "#!/bin/sh\n\
 for arg do url=\"$arg\"; done\n\
 case \"$url\" in\n\
-  'https://gitlab.com/zitzhen/coco-community-control/-/merge_requests/363.patch')\n\
+  'https://gitlab.com/zitzhen/patchsplit/-/merge_requests/1.patch')\n\
     cat \"$PATCHSPLIT_TEST_MR_PATCH\" ;;\n\
-  'https://gitlab.com/zitzhen/coco-community-control/-/merge_requests/363.diff')\n\
+  'https://gitlab.com/zitzhen/patchsplit/-/merge_requests/1.diff')\n\
     cat \"$PATCHSPLIT_TEST_MR_DIFF\" ;;\n\
-  'https://gitlab.com/zitzhen/coco-community-control/-/commit/de9ea1a.patch')\n\
+  'https://gitlab.com/zitzhen/patchsplit/-/commit/de9ea1a.patch')\n\
     cat \"$PATCHSPLIT_TEST_COMMIT\" ;;\n\
   *) echo \"unexpected url: $url\" >&2; exit 22 ;;\n\
 esac\n",
